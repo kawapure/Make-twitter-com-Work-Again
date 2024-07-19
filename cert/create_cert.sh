@@ -20,7 +20,7 @@ MSYS_NO_PATHCONV=1
 #     -keyout server.key -out server.csr
 
 # Create a certificate authority:
-openssl req -x509 -config ca.conf -newkey rsa:4096 -sha256 -nodes \
+openssl req -x509 -config ca.conf -newkey rsa:4096 -sha256 -nodes -days 3650 \
     -out ca-crt.pem -outform PEM
     
 # Create a certificate for twitter.com:
