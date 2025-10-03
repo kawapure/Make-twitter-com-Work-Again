@@ -17,13 +17,6 @@ use YukisCoffee\CoffeeRequest\Network\ResponseHeaders;
 class SimpleFunnel
 {
     /**
-     * Hostname for funnelCurrentPage.
-     * 
-     * @var string
-     */
-    private static $hostname = "x.com";
-
-    /**
      * Remove these request headers.
      * LOWERCASE ONLY
      * 
@@ -79,13 +72,25 @@ class SimpleFunnel
         {
             if (!in_array(strtolower($key), self::$illegalRequestHeaders))
             {
-                $headers[$key] = $val;
+                if (strtolower($key) == "origin")
+                {
+                    $headers[$key] = "https://x.com";
+                }
+                else if (strtolower($key) == "referer")
+                {
+                    $headers[$key] = "https://x.com/" .
+                        explode("https://twitter.com/", $val)[1];
+                }
+                else
+                {
+                    $headers[$key] = $val;
+                }
             }
         }
-
+        
+        $headers["TE"] = "trailers";
+        
         $headers["Host"] = $opts["host"];
-        // $headers["Origin"] = "https://" . $opts["host"];
-        // $headers["Referer"] = "https://" . $opts["host"] . $opts["uri"];
 
         // Set up cURL and perform the request
         $url = "https://" . $opts["host"] . $opts["uri"];
@@ -103,8 +108,37 @@ class SimpleFunnel
         }
 
         $wrappedResponse = new Promise/*<Response>*/;
-
+        
+        if ($opts["uri"] == "/i/api/graphql/ZSBCfCefJFumbPcLcwR64Q/CreateTweet")
+        {
+            $headers2 = [];
+            foreach ($headers as $k => $h)
+                $headers2[] = "$k: $h";
+            
+            $curl = new CurlImpersonate();
+            $curl->setopt(CURLCMDOPT_URL, $url);
+            $curl->setopt(CURLCMDOPT_METHOD, $opts["method"]);
+            $curl->setopt(CURLCMDOPT_HEADER, true);
+            $curl->setopt(CURLCMDOPT_POSTFIELDS, $opts["body"]);
+            $curl->setopt(CURLCMDOPT_HTTP_HEADERS, $headers2);
+            $curl->setopt(CURLCMDOPT_ENGINE, $_SERVER["DOCUMENT_ROOT"] . "/bin/curl_firefox133.bat");
+            $response = $curl->execStandard();
+            echo $response;
+            $curl->closeStream();
+            exit();
+        }
+        
         $request = CoffeeRequest::request($url, $params);
+        
+        // header("access-control-allow-credentials: true");
+        // header("access-control-allow-origin: https://twitter.com");
+        // header("access-control-allow-methods: HEAD,PUT,GET,POST,DELETE");
+        // header("access-control-allow-headers: X-Attest-Token,X-Web-Auth-Multi-User-Id,Timezone,X-Contributor-Version,X-Twitter-CESModel-Version,Server,X-Twitter-Client-Version,X-Twitter-Diffy-Request-Key,Dtab-Local,X-Twitter-Client-Language,X-Client-Transaction-Id,X-XP-Auth-Token,Apollo-Require-Preflight,If-Modified-Since,X-Twitter-Client,SecurelyOktaToken,X-XP-Forwarded-With,X-TD-Iff-Mtime,X-Client-UUID,X-Twitter-Auth-Type,Content-Length,Alt-Used,X-B3-Flags,Cache-Control,X-Transaction-Id,X-XP-TX-Token,X-TFE-Bot-Test,Content-Type,X-TD-Mtime-Check,Pragma,X-CSRF-Token,X-Twitter-Polling,X-Twitter-Active-User,X-Guest-Token,LivePipeline-Session,X-Twitter-UTCOffset,X-Response-Time,X-Act-As-User-Id,X-XP-Forwarded-For,Authorization,X-Xai-Request-Id,X-XP-IDV-Token,X-Contribute-To-User-Id,X-Attest-Signature");
+        // header("access-control-expose-headers: X-Twitter-Spotify-Access-Token,X-Twitter-Client-Version,X-Twitter-Diffy-Request-Key,X-Rate-Limit-Limit,X-TD-Mtime,X-Twitter-Client,Backoff-Policy,X-Rate-Limit-Remaining,Content-Length,X-Rate-Limit-Reset,X-Transaction-Id,X-Acted-As-User-Id,X-Twitter-Polling,X-Twitter-UTCOffset,X-Response-Time");
+        // header("access-control-max-age: 1728000");
+        // var_dump($headers);
+        // var_dump($request);
+        // die();
 
         $request->then(function($response) use ($wrappedResponse) {
             $wrappedResponse->resolve(SimpleFunnelResponse::fromResponse($response));
@@ -168,7 +202,9 @@ class SimpleFunnel
     {
         return self::funnel([
             "method" => $_SERVER["REQUEST_METHOD"],
-            "host" => self::$hostname,
+            "host" => $_SERVER["HTTP_HOST"] == "api.twitter.com"
+                ? "api.x.com"
+                : "x.com",
             "uri" => $_SERVER["REQUEST_URI"],
             "useragent" => $_SERVER["HTTP_USER_AGENT"],
             "body" => file_get_contents("php://input"),
@@ -188,7 +224,7 @@ class SimpleFunnelResponse extends Response
     {
         return new self(
             source: $response->sourceRequest,
-            status: $response->status,
+            status: 200/*$response->status*/,
             content: $response->getText(),
             headers: self::processResponseHeaders($response->headers)
         );
@@ -224,6 +260,15 @@ class SimpleFunnelResponse extends Response
                 $result[$name] = $value;
             }
         }
+        
+        // All of the below are required for access control:
+        //$result["access-control-allow-credentials"] = "true";
+        //$result["access-control-allow-origin"] = "https://twitter.com";
+        //$result["access-control-allow-headers"] = "X-Attest-Token,X-Web-Auth-Multi-User-Id,Timezone,X-Contributor-Version,X-Twitter-CESModel-Version,Server,X-Twitter-Client-Version,X-Twitter-Diffy-Request-Key,Dtab-Local,X-Twitter-Client-Language,X-Client-Transaction-Id,X-XP-Auth-Token,Apollo-Require-Preflight,If-Modified-Since,X-Twitter-Client,SecurelyOktaToken,X-XP-Forwarded-With,X-TD-Iff-Mtime,X-Client-UUID,X-Twitter-Auth-Type,Content-Length,Alt-Used,X-B3-Flags,Cache-Control,X-Transaction-Id,X-XP-TX-Token,X-TFE-Bot-Test,Content-Type,X-TD-Mtime-Check,Pragma,X-CSRF-Token,X-Twitter-Polling,X-Twitter-Active-User,X-Guest-Token,LivePipeline-Session,X-Twitter-UTCOffset,X-Response-Time,X-Act-As-User-Id,X-XP-Forwarded-For,Authorization,X-Xai-Request-Id,X-XP-IDV-Token,X-Contribute-To-User-Id,X-Attest-Signature";
+        
+        // $result["access-control-allow-methods"] = "HEAD,PUT,GET,POST,DELETE";
+        // $result["access-control-expose-headers"] = "X-Twitter-Spotify-Access-Token,X-Twitter-Client-Version,X-Twitter-Diffy-Request-Key,X-Rate-Limit-Limit,X-TD-Mtime,X-Twitter-Client,Backoff-Policy,X-Rate-Limit-Remaining,Content-Length,X-Rate-Limit-Reset,X-Transaction-Id,X-Acted-As-User-Id,X-Twitter-Polling,X-Twitter-UTCOffset,X-Response-Time";
+        // $result["access-control-max-age"] = "1728000";
 
         return $result;
     }
