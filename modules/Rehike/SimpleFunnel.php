@@ -1,6 +1,7 @@
 <?php
 namespace Rehike;
 
+use TwitterRedirect\CurlExternal\CurlExternalHandler;
 use YukisCoffee\CoffeeRequest\CoffeeRequest;
 use YukisCoffee\CoffeeRequest\Promise;
 use YukisCoffee\CoffeeRequest\Network\Request;
@@ -109,23 +110,11 @@ class SimpleFunnel
 
         $wrappedResponse = new Promise/*<Response>*/;
         
-        if ($opts["uri"] == "/i/api/graphql/ZSBCfCefJFumbPcLcwR64Q/CreateTweet")
+        if (preg_match("/\/i\/api\/graphql\/\w+\/CreateTweet/", $opts["uri"]))
         {
-            $headers2 = [];
-            foreach ($headers as $k => $h)
-                $headers2[] = "$k: $h";
-            
-            $curl = new CurlImpersonate();
-            $curl->setopt(CURLCMDOPT_URL, $url);
-            $curl->setopt(CURLCMDOPT_METHOD, $opts["method"]);
-            $curl->setopt(CURLCMDOPT_HEADER, true);
-            $curl->setopt(CURLCMDOPT_POSTFIELDS, $opts["body"]);
-            $curl->setopt(CURLCMDOPT_HTTP_HEADERS, $headers2);
-            $curl->setopt(CURLCMDOPT_ENGINE, $_SERVER["DOCUMENT_ROOT"] . "/bin/curl_firefox133.bat");
-            $response = $curl->execStandard();
-            echo $response;
-            $curl->closeStream();
-            exit();
+            $script = $_SERVER["DOCUMENT_ROOT"] . "/bin/curl_firefox133.bat";
+            $curlExternalHandler = new CurlExternalHandler($script);
+            CoffeeRequest::setNetworkHandler($curlExternalHandler);
         }
         
         $request = CoffeeRequest::request($url, $params);
