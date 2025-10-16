@@ -110,7 +110,7 @@ class SimpleFunnel
 
         $wrappedResponse = new Promise/*<Response>*/;
         
-        if (preg_match("/\/i\/api\/graphql\/\w+\/CreateTweet/", $opts["uri"]))
+        if (preg_match("/\/i\/api\/graphql\/.*?\/CreateTweet/", $opts["uri"]))
         {
             $script = $_SERVER["DOCUMENT_ROOT"] . "/bin/curl_firefox133.bat";
             $curlExternalHandler = new CurlExternalHandler($script);
