@@ -32,6 +32,9 @@ final class Utils
         static $expr = '(
             [\x00-\x20\x7F"] # control chars, whitespace or double quote
             | \\\\++ (?=("|$)) # backslashes followed by a quote or at the end
+            | \|
+            | \<
+            | \>
             )ux';
 
         if ($value === '') {
@@ -49,6 +52,18 @@ final class Utils
                     return $match[0];
                 case '\\': // matching backslashes are escaped if quoted
                     return $match[0] . $match[0];
+                // This is the only way I could figure out how to escape a pipe.
+                case "|":
+                    return "\"|\"";
+                case "<":
+                    return "\"<\"";
+                case ">":
+                    return "\">\"";
+                // TODO: Verify the necessity of this:
+                // case "&":
+                //     return "\"&\"";
+                // case "^":
+                //     return "\"^\"";
                 default:
                     throw new \InvalidArgumentException(sprintf(
                         "Invalid byte at offset %d: 0x%02X",

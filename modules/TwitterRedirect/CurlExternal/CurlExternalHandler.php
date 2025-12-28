@@ -31,7 +31,7 @@ class CurlExternalHandler extends NetworkHandler
     
     public function __construct(string $curlBinaryPath)
     {
-        $this->curlBinaryPath = $curlBinaryPath;
+        $this->curlBinaryPath = str_replace("/", PHP_OS == "WINNT" ? "\\" : "/", $curlBinaryPath);
     }
     
     #[Override]
@@ -46,10 +46,19 @@ class CurlExternalHandler extends NetworkHandler
         // Set up all requests:
         foreach ($this->requests as $request)
         {
+            // $command = $this->curlBinaryPath . " " . implode(" ", $request->args);
+            // throw new \Exception($command);
+            // die();
+            
             $request->hProcess = proc_open(
                 $this->curlBinaryPath . " " . implode(" ", $request->args),
                 $request->pipeDescriptor,
                 $request->pipes,
+                options: PHP_OS == "WINNT"
+                    ? [
+                        "bypass_shell" => true,
+                    ]
+                    : [],
             );
             
             // We don't want any pipe to block.
@@ -72,10 +81,10 @@ class CurlExternalHandler extends NetworkHandler
                     continue;
                 }
                 
-                usleep(10);
-                
                 if (!self::USE_SYNCHRONOUS_REQUEST)
                 {
+                    usleep(10);
+                    
                     // Read a little bit from stdout and stderr:
                     $stdoutChunk = $this->readPipeChunk($request, CurlExternalRequest::PIPE_STDOUT);
                     $stderrChunk = $this->readPipeChunk($request, CurlExternalRequest::PIPE_STDERR);
@@ -208,6 +217,9 @@ class CurlExternalHandler extends NetworkHandler
         }
         
         $htmlText = substr($responseText, $terminator);
+        
+        // header("Content-Type: text/plain; charset=shift_jis");
+        // var_dump($request->stderr);
         
         $result = new Response(
             $request->request,

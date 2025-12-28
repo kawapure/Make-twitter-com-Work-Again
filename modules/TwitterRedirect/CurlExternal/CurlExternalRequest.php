@@ -102,6 +102,12 @@ final class CurlExternalRequest
         
         // Pass the request URI:
         $this->passArgument(Utils::ensureQuoted(Utils::escapeCommandLine($request->url)));
+        
+        // This argument seems to be position-dependent. It seems to be ignored
+        // if it precedes the request URI.
+        $this->passArgument("--resolve x.com:443:162.159.140.229");
+        
+        $this->passArgument('--dns-servers "8.8.8.8,8.8.4.4"');
     }
     
     public function passArgument(string $value): self
