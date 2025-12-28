@@ -35,6 +35,7 @@ final class Utils
             | \|
             | \<
             | \>
+            | \&
             )ux';
 
         if ($value === '') {
@@ -59,9 +60,9 @@ final class Utils
                     return "\"<\"";
                 case ">":
                     return "\">\"";
+                case "&":
+                    return "\"&\"";
                 // TODO: Verify the necessity of this:
-                // case "&":
-                //     return "\"&\"";
                 // case "^":
                 //     return "\"^\"";
                 default:
